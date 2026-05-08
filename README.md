@@ -10,7 +10,9 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-Open http://localhost:8000 for the chat UI.
+🚀 Live Demo
+The application is deployed and can be accessed at:
+https://shl-recommender-uw2d.onrender.com
 
 ## API Endpoints
 
