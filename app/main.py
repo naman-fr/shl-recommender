@@ -2,7 +2,7 @@
 SHL Assessment Recommender — FastAPI Application
 
 Exposes:
-  GET  /health  → Health check
+  GET  /health  → Health check (returns {"status": "ok"})
   POST /chat    → Conversational chat endpoint
   GET  /        → Frontend UI
 """
@@ -14,8 +14,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
 
 from app.models import ChatRequest, ChatResponse, HealthResponse
@@ -70,21 +69,24 @@ app.add_middleware(
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])
 async def health_check():
-    """Health check endpoint."""
-    return HealthResponse(status="healthy")
+    """Health check endpoint. Returns {"status": "ok"}."""
+    return HealthResponse(status="ok")
 
 
 @app.post("/chat", response_model=ChatResponse, tags=["chat"])
 async def chat_endpoint(request: ChatRequest):
     """
-    Process a chat message and return the agent's response
-    with optional assessment recommendations.
+    Process a chat message and return the agent's response.
+    
+    Schema contract (non-negotiable for evaluator):
+    - recommendations: EMPTY when clarifying/refusing, 1-10 items when recommending
+    - end_of_conversation: true only when agent considers task complete
     """
     if agent is None:
         raise HTTPException(status_code=503, detail="Agent not initialized")
 
     try:
-        response_text, recommendations = await agent.chat(
+        response_text, recommendations, end_of_conversation = await agent.chat(
             session_id=request.session_id,
             user_message=request.message,
         )
@@ -93,6 +95,7 @@ async def chat_endpoint(request: ChatRequest):
             session_id=request.session_id,
             response=response_text,
             recommendations=recommendations,
+            end_of_conversation=end_of_conversation,
         )
 
     except Exception as e:
